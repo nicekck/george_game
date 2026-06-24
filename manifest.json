@@ -1,0 +1,14 @@
+{
+  "name": "George Jump",
+  "short_name": "George Jump",
+  "description": "원탭 무한 점프 게임 — 장애물을 피하고 동전을 모으세요!",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1622",
+  "theme_color": "#1b2838",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

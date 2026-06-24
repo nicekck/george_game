@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1b2838">
+<title>George Jump</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #0e1622;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none;
+  }
+  #game-wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas { display: block; touch-action: none; }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff; text-align: center; padding: 24px;
+    background: rgba(10, 18, 30, 0.72);
+    backdrop-filter: blur(2px);
+  }
+  .overlay.hidden { display: none; }
+  .title {
+    font-size: clamp(36px, 12vw, 72px); font-weight: 800;
+    letter-spacing: 1px; line-height: 1.05;
+    background: linear-gradient(180deg, #ffe48a, #f6a821);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .subtitle { margin-top: 10px; font-size: clamp(14px, 4.5vw, 20px); opacity: 0.85; }
+  .btn {
+    margin-top: 28px; padding: 16px 40px; font-size: clamp(18px, 5vw, 24px);
+    font-weight: 700; color: #1b2838; border: none; border-radius: 999px;
+    background: linear-gradient(180deg, #ffe48a, #f6a821);
+    box-shadow: 0 8px 0 #b9791a, 0 12px 24px rgba(0,0,0,0.4);
+    cursor: pointer; transition: transform .05s ease;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #b9791a, 0 6px 12px rgba(0,0,0,0.4); }
+  .score-line { margin-top: 18px; font-size: clamp(16px, 5vw, 22px); }
+  .score-line b { color: #ffe48a; }
+  .best-line { margin-top: 6px; font-size: clamp(13px, 4vw, 16px); opacity: 0.7; }
+  .hint { margin-top: 22px; font-size: clamp(12px, 3.6vw, 15px); opacity: 0.55; }
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+
+  <div id="start-screen" class="overlay">
+    <div class="title">GEORGE<br>JUMP</div>
+    <div class="subtitle">탭해서 점프! 동전을 모으고 장애물을 피하세요</div>
+    <button class="btn" id="start-btn">시작하기</button>
+    <div class="hint">화면 아무 곳이나 탭하면 점프합니다</div>
+  </div>
+
+  <div id="over-screen" class="overlay hidden">
+    <div class="title" style="font-size: clamp(30px, 10vw, 56px)">게임 오버</div>
+    <div class="score-line">점수 <b id="final-score">0</b></div>
+    <div class="best-line">최고 점수 <span id="best-score">0</span></div>
+    <button class="btn" id="retry-btn">다시 하기</button>
+    <div class="hint">탭하여 다시 시작</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const startScreen = document.getElementById("start-screen");
+  const overScreen = document.getElementById("over-screen");
+  const startBtn = document.getElementById("start-btn");
+  const retryBtn = document.getElementById("retry-btn");
+  const finalScoreEl = document.getElementById("final-score");
+  const bestScoreEl = document.getElementById("best-score");
+
+  // ---- Logical coordinate system (design space), scaled to fit screen ----
+  const W = 480;            // logical width
+  let H = 800;              // logical height (recomputed to match aspect ratio)
+  let scale = 1, offsetX = 0, offsetY = 0, dpr = 1;
+
+  function resize() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // Keep logical width fixed, derive logical height from screen aspect ratio
+    H = Math.round(W * (vh / vw));
+    H = Math.max(640, Math.min(H, 1100));
+    scale = Math.min(vw / W, vh / H);
+    canvas.width = Math.round(vw * dpr);
+    canvas.height = Math.round(vh * dpr);
+    canvas.style.width = vw + "px";
+    canvas.style.height = vh + "px";
+    offsetX = (vw - W * scale) / 2;
+    offsetY = (vh - H * scale) / 2;
+  }
+  window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", resize);
+  resize();
+
+  // ---- Game state ----
+  const STATE = { START: 0, PLAY: 1, OVER: 2 };
+  let state = STATE.START;
+
+  const GROUND_H = 96;       // height of the ground band
+  let groundY = () => H - GROUND_H;
+
+  const player = {
+    x: 96, y: 0, w: 28, h: 62,
+    vy: 0, onGround: true,
+    jumps: 0, maxJumps: 2,
+    legPhase: 0
+  };
+
+  // George sprite (생성된 픽셀 아트). 로드 전에는 도형으로 대체 렌더.
+  const georgeImg = new Image();
+  let georgeReady = false;
+  georgeImg.onload = function () {
+    georgeReady = true;
+    // 스프라이트 실제 비율에 맞춰 히트박스 폭 보정
+    player.w = Math.round(player.h * (georgeImg.width / georgeImg.height));
+  };
+  georgeImg.src = "assets/george.png";
+
+  const GRAVITY = 2400;      // px / s^2
+  const JUMP_V = -880;       // initial jump velocity
+
+  let obstacles = [];
+  let coins = [];
+  let particles = [];
+  let clouds = [];
+
+  let score = 0;
+  let coinCount = 0;
+  let best = 0;
+  let speed = 320;           // world scroll speed px/s
+  let spawnTimer = 0;
+  let coinTimer = 0;
+  let scrollX = 0;           // for ground texture
+  let shake = 0;
+
+  try { best = parseInt(localStorage.getItem("georgeJumpBest") || "0", 10) || 0; } catch (e) {}
+
+  function resetGame() {
+    player.y = groundY() - player.h;
+    player.vy = 0; player.onGround = true; player.jumps = 0;
+    obstacles = []; coins = []; particles = [];
+    score = 0; coinCount = 0; speed = 320;
+    spawnTimer = 0.6; coinTimer = 1.2; scrollX = 0; shake = 0;
+    clouds = [];
+    for (let i = 0; i < 4; i++) {
+      clouds.push({ x: Math.random() * W, y: 60 + Math.random() * 180,
+        s: 0.4 + Math.random() * 0.6, r: 26 + Math.random() * 22 });
+    }
+  }
+
+  // ---- Input ----
+  function doJump() {
+    if (state !== STATE.PLAY) return;
+    if (player.jumps < player.maxJumps) {
+      player.vy = JUMP_V;
+      player.onGround = false;
+      player.jumps++;
+      // jump puff
+      for (let i = 0; i < 6; i++) {
+        particles.push({
+          x: player.x + player.w / 2, y: player.y + player.h,
+          vx: (Math.random() - 0.5) * 120, vy: Math.random() * 120 + 40,
+          life: 0.4, max: 0.4, r: 4 + Math.random() * 3, c: "#cfd8e3"
+        });
+      }
+    }
+  }
+
+  function onTap(e) {
+    e.preventDefault();
+    if (state === STATE.PLAY) doJump();
+  }
+  canvas.addEventListener("touchstart", onTap, { passive: false });
+  canvas.addEventListener("mousedown", onTap);
+  window.addEventListener("keydown", function (e) {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+      e.preventDefault();
+      if (state === STATE.START) startGame();
+      else if (state === STATE.PLAY) doJump();
+      else if (state === STATE.OVER) startGame();
+    }
+  });
+
+  function startGame() {
+    resetGame();
+    state = STATE.PLAY;
+    startScreen.classList.add("hidden");
+    overScreen.classList.add("hidden");
+  }
+  function gameOver() {
+    state = STATE.OVER;
+    if (score > best) {
+      best = score;
+      try { localStorage.setItem("georgeJumpBest", String(best)); } catch (e) {}
+    }
+    finalScoreEl.textContent = score;
+    bestScoreEl.textContent = best;
+    overScreen.classList.remove("hidden");
+    shake = 14;
+  }
+
+  startBtn.addEventListener("click", startGame);
+  retryBtn.addEventListener("click", startGame);
+
+  // ---- Spawning ----
+  function spawnObstacle() {
+    const tall = Math.random() < 0.35;
+    const w = 28 + Math.random() * 18;
+    const h = tall ? 56 + Math.random() * 30 : 30 + Math.random() * 18;
+    obstacles.push({ x: W + 40, y: groundY() - h, w: w, h: h, passed: false });
+  }
+  function spawnCoin() {
+    const lane = Math.random();
+    const baseY = lane < 0.5 ? groundY() - 60 : groundY() - 160;
+    const n = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      coins.push({ x: W + 40 + i * 42, y: baseY, r: 13, t: Math.random() * 6, got: false });
+    }
+  }
+
+  // ---- Collision ----
+  function hit(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  // ---- Update ----
+  let last = 0;
+  function update(dt) {
+    if (state !== STATE.PLAY) return;
+
+    speed += dt * 6;                 // gradual ramp-up
+    score += Math.floor(speed * dt * 0.05);
+    scrollX = (scrollX + speed * dt) % 48;
+
+    // player physics
+    player.vy += GRAVITY * dt;
+    player.y += player.vy * dt;
+    const gy = groundY() - player.h;
+    if (player.y >= gy) {
+      player.y = gy; player.vy = 0;
+      if (!player.onGround) { player.onGround = true; player.jumps = 0; }
+    }
+    player.legPhase += dt * (player.onGround ? speed * 0.04 : 0);
+
+    // clouds
+    for (const c of clouds) {
+      c.x -= speed * 0.12 * c.s * dt;
+      if (c.x < -80) { c.x = W + 60; c.y = 50 + Math.random() * 200; }
+    }
+
+    // spawn
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnObstacle();
+      const gap = Math.max(0.7, 1.5 - speed / 900);
+      spawnTimer = gap + Math.random() * 0.6;
+    }
+    coinTimer -= dt;
+    if (coinTimer <= 0) {
+      spawnCoin();
+      coinTimer = 1.0 + Math.random() * 1.6;
+    }
+
+    // move + collide obstacles
+    for (const o of obstacles) {
+      o.x -= speed * dt;
+      if (!o.passed && o.x + o.w < player.x) { o.passed = true; score += 5; }
+      if (hit(player, o)) { gameOver(); return; }
+    }
+    obstacles = obstacles.filter(o => o.x + o.w > -10);
+
+    // coins
+    for (const c of coins) {
+      c.x -= speed * dt;
+      c.t += dt * 6;
+      if (!c.got) {
+        const dx = (player.x + player.w / 2) - c.x;
+        const dy = (player.y + player.h / 2) - c.y;
+        if (dx * dx + dy * dy < (c.r + 24) * (c.r + 24)) {
+          c.got = true; coinCount++; score += 10;
+          for (let i = 0; i < 8; i++) {
+            particles.push({
+              x: c.x, y: c.y,
+              vx: (Math.random() - 0.5) * 220, vy: (Math.random() - 0.5) * 220,
+              life: 0.5, max: 0.5, r: 3 + Math.random() * 3, c: "#ffe48a"
+            });
+          }
+        }
+      }
+    }
+    coins = coins.filter(c => !c.got && c.x > -20);
+
+    // particles
+    for (const p of particles) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vy += 200 * dt; p.life -= dt;
+    }
+    particles = particles.filter(p => p.life > 0);
+
+    if (shake > 0) shake = Math.max(0, shake - dt * 40);
+  }
+
+  // ---- Drawing ----
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#2a4a6e");
+    g.addColorStop(0.55, "#3d6e9c");
+    g.addColorStop(1, "#7fb4d6");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // sun
+    ctx.fillStyle = "rgba(255, 236, 170, 0.85)";
+    ctx.beginPath(); ctx.arc(W - 90, 110, 46, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255, 236, 170, 0.18)";
+    ctx.beginPath(); ctx.arc(W - 90, 110, 78, 0, Math.PI * 2); ctx.fill();
+
+    // clouds
+    for (const c of clouds) {
+      ctx.fillStyle = "rgba(255,255,255,0.78)";
+      cloud(c.x, c.y, c.r);
+    }
+  }
+  function cloud(x, y, r) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.9, y + 6, r * 0.75, 0, Math.PI * 2);
+    ctx.arc(x - r * 0.9, y + 8, r * 0.7, 0, Math.PI * 2);
+    ctx.arc(x, y + 12, r * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawGround() {
+    const gy = groundY();
+    ctx.fillStyle = "#6b4a2f";
+    ctx.fillRect(0, gy, W, GROUND_H);
+    ctx.fillStyle = "#5aa64b";
+    ctx.fillRect(0, gy, W, 16);
+    ctx.fillStyle = "#4d8f40";
+    for (let x = -scrollX; x < W; x += 48) {
+      ctx.fillRect(x, gy + 14, 24, 6);
+    }
+    // dirt speckles
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    for (let x = -scrollX; x < W; x += 48) {
+      ctx.fillRect(x + 10, gy + 40, 6, 6);
+      ctx.fillRect(x + 30, gy + 64, 5, 5);
+    }
+  }
+
+  // George — 사진에서 변환한 픽셀 스프라이트
+  function drawPlayer() {
+    const px = player.x, py = player.y, pw = player.w, ph = player.h;
+    const cx = px + pw / 2;
+
+    // shadow
+    const sg = Math.max(0, 1 - (groundY() - (py + ph)) / 220);
+    ctx.fillStyle = "rgba(0,0,0," + (0.28 * sg) + ")";
+    ctx.beginPath();
+    ctx.ellipse(cx, groundY() + 4, pw * 0.62, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (georgeReady) {
+      // 달릴 때 살짝 위아래 바운스, 점프 시 살짝 기울임
+      const bob = player.onGround ? Math.abs(Math.sin(player.legPhase)) * 3 : 0;
+      const tilt = Math.max(-0.18, Math.min(0.18, player.vy / 4000));
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(cx, py + ph);          // 발끝 기준
+      ctx.rotate(tilt);
+      ctx.drawImage(georgeImg, -pw / 2, -ph + bob, pw, ph);
+      ctx.restore();
+    } else {
+      // 폴백: 단순 도형 (스프라이트 로드 전)
+      ctx.fillStyle = "#28508a";
+      roundRect(px, py + ph * 0.25, pw, ph * 0.75, 6); ctx.fill();
+      ctx.fillStyle = "#e8c9a0";
+      ctx.beginPath(); ctx.arc(cx, py + ph * 0.18, pw * 0.42, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawObstacles() {
+    for (const o of obstacles) {
+      // cactus-style obstacle
+      ctx.fillStyle = "#3f7d36";
+      roundRect(o.x, o.y, o.w, o.h, 8);
+      ctx.fill();
+      ctx.fillStyle = "#357030";
+      roundRect(o.x + o.w * 0.18, o.y + 6, o.w * 0.22, o.h - 12, 6);
+      ctx.fill();
+      // spikes highlight
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      roundRect(o.x + o.w - 8, o.y + 4, 4, o.h - 10, 3);
+      ctx.fill();
+    }
+  }
+
+  function drawCoins() {
+    for (const c of coins) {
+      const sq = Math.abs(Math.cos(c.t)); // spin effect
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.scale(0.4 + sq * 0.6, 1);
+      ctx.fillStyle = "#f6c026";
+      ctx.beginPath(); ctx.arc(0, 0, c.r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffe48a";
+      ctx.beginPath(); ctx.arc(0, 0, c.r * 0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "#c8961a";
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if (sq > 0.5) ctx.fillText("G", c.x, c.y + 1);
+    }
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawHUD() {
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 30px sans-serif";
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 6;
+    ctx.fillText(String(score), 20, 22);
+    ctx.shadowBlur = 0;
+
+    // coin counter
+    ctx.fillStyle = "#f6c026";
+    ctx.beginPath(); ctx.arc(W - 78, 36, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 24px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("x " + coinCount, W - 60, 24);
+  }
+
+  function roundRect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function render() {
+    // clear full canvas (device space)
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#0e1622";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // apply logical transform (+ screen shake)
+    let sx = 0, sy = 0;
+    if (shake > 0) {
+      sx = (Math.random() - 0.5) * shake;
+      sy = (Math.random() - 0.5) * shake;
+    }
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr,
+      (offsetX + sx) * dpr, (offsetY + sy) * dpr);
+
+    // clip to logical play area
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+
+    drawBackground();
+    drawGround();
+    drawCoins();
+    drawObstacles();
+    drawParticles();
+    drawPlayer();
+    if (state === STATE.PLAY) drawHUD();
+
+    ctx.restore();
+  }
+
+  function loop(t) {
+    if (!last) last = t;
+    let dt = (t - last) / 1000;
+    last = t;
+    if (dt > 0.05) dt = 0.05;   // clamp for stability after tab-switch
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // place George on the ground for the start screen
+  resetGame();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

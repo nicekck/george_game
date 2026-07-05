@@ -52,6 +52,26 @@
   .btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #b97d14; }
   .btn.green { background: linear-gradient(180deg, #b6ff9c, #33cc55); box-shadow: 0 8px 0 #1d8a37, 0 14px 26px rgba(0,0,0,0.45); }
   .btn.green:active { box-shadow: 0 4px 0 #1d8a37; }
+  .btn.red { color: #fff; background: linear-gradient(180deg, #ff8f8f, #e5384a); box-shadow: 0 8px 0 #93202c, 0 14px 26px rgba(0,0,0,0.45); }
+  .btn.red:active { box-shadow: 0 4px 0 #93202c; }
+  .btn.ghost { color: #cdd6f5; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.28);
+    box-shadow: none; padding: 12px 28px; font-size: clamp(15px, 4.2vw, 18px); font-weight: 700; }
+  .btn.ghost:active { transform: translateY(2px); background: rgba(255,255,255,0.14); }
+
+  /* Wallet + mode select */
+  .wallet {
+    margin-top: 18px; padding: 8px 20px; border-radius: 999px;
+    background: rgba(255,226,122,0.12); border: 1.5px solid rgba(255,226,122,0.4);
+    font-size: clamp(15px, 4.6vw, 19px); font-weight: 800; color: #ffe27a;
+  }
+  .mode-select { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; width: min(380px, 86vw); }
+  .mode-btn {
+    margin-top: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 14px 20px; border-radius: 20px; width: 100%;
+  }
+  .mode-btn .mode-title { font-size: clamp(20px, 5.6vw, 26px); font-weight: 900; letter-spacing: 1px; }
+  .mode-btn .mode-desc { font-size: clamp(12px, 3.4vw, 14px); font-weight: 700; opacity: 0.8; }
+  .reward { margin-top: 12px; font-size: clamp(20px, 6.5vw, 30px); font-weight: 900; color: #ffe27a; min-height: 1px; }
 
   .result-time {
     margin-top: 6px; font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -93,9 +113,20 @@
 
   <div id="start-screen" class="overlay">
     <div class="title">STOP<br><span class="big">10.00</span></div>
-    <div class="subtitle">가챠 부스의 <b>10초 맞추기</b>!<br>스톱워치를 정확히 <b>10.00초</b>에 멈추면<br>문이 열리고 인형을 획득합니다.</div>
-    <button class="btn" id="start-btn">🪙 동전 넣고 START</button>
-    <div class="hint">START 후 "삼·이·일" 카운트 → 타이머 작동(숨김)<br>화면 아무 곳이나 탭해도 STOP 됩니다</div>
+    <div class="subtitle">정확히 <b>10.00초</b>에 멈추면<br>부스 문이 열리고 <b>코인</b>을 획득!</div>
+    <div class="wallet">보유 코인 🪙 <b id="coins-start">0</b></div>
+    <div class="mode-select">
+      <button class="btn green mode-btn" id="easy-btn">
+        <span class="mode-title">🟢 EASY</span>
+        <span class="mode-desc">시간 표시 · 참가 1🪙 · 성공 +50🪙</span>
+      </button>
+      <button class="btn red mode-btn" id="hard-btn">
+        <span class="mode-title">🔴 HARD</span>
+        <span class="mode-desc">숫자 숨김 · 참가 5🪙 · 성공 +100🪙</span>
+      </button>
+    </div>
+    <div class="reward" id="coin-msg"></div>
+    <div class="hint">모드를 선택하면 "삼·이·일" 카운트 → 스톱워치 작동<br>화면 아무 곳이나 탭해도 STOP 됩니다</div>
     <a class="jump-link" href="jump.html">🏃 George Jump →</a>
   </div>
 
@@ -103,8 +134,10 @@
     <div class="result-grade" id="grade">—</div>
     <div class="result-time" id="final-time">0.00</div>
     <div class="result-hint" id="result-hint"></div>
-    <div class="best-line">최고 기록(오차) <b id="best-err">—</b> · 잭팟 <b id="jackpot-count">0</b>회</div>
+    <div class="reward" id="reward-line"></div>
+    <div class="best-line">보유 코인 🪙 <b id="coins-result">0</b> · 최고 오차 <b id="best-err">—</b> · 잭팟 <b id="jackpot-count">0</b></div>
     <button class="btn" id="retry-btn">다시 하기</button>
+    <button class="btn ghost" id="mode-btn">← 모드 선택</button>
     <div class="hint">Space / 탭으로 다시 시작</div>
   </div>
 </div>
@@ -117,12 +150,18 @@
   const ctx = canvas.getContext("2d");
   const startScreen = document.getElementById("start-screen");
   const overScreen  = document.getElementById("over-screen");
-  const startBtn    = document.getElementById("start-btn");
+  const easyBtn     = document.getElementById("easy-btn");
+  const hardBtn     = document.getElementById("hard-btn");
+  const modeBtn     = document.getElementById("mode-btn");
   const retryBtn    = document.getElementById("retry-btn");
   const stopBtn     = document.getElementById("stop-btn");
   const gradeEl     = document.getElementById("grade");
   const finalTimeEl = document.getElementById("final-time");
   const resultHintEl= document.getElementById("result-hint");
+  const rewardLineEl= document.getElementById("reward-line");
+  const coinMsgEl   = document.getElementById("coin-msg");
+  const coinsStartEl= document.getElementById("coins-start");
+  const coinsResultEl=document.getElementById("coins-result");
   const bestErrEl   = document.getElementById("best-err");
   const jackpotCntEl= document.getElementById("jackpot-count");
 
@@ -223,13 +262,26 @@
   let anim = 0;                // global animation clock (s)
   let flashGo = 0;             // "GO!" flash timer
 
+  // ---- Modes & coin economy ----
+  let mode = "easy";                        // "easy" (time shown) | "hard" (hidden)
+  const COST   = { easy: 1,  hard: 5   };   // coins spent to play a round
+  const REWARD = { easy: 50, hard: 100 };   // coins earned on exact 10.00
+
   // persistent stats
-  let bestErr = null, jackpots = 0;
+  const START_COINS = 500;      // default wallet for a new player
+  let coins = START_COINS, bestErr = null, jackpots = 0;
   try {
+    const c = localStorage.getItem("stop1000_coins");
+    coins = (c !== null) ? (parseInt(c, 10) || 0) : START_COINS;
     const b = localStorage.getItem("stop1000_bestErr");
     if (b !== null) bestErr = parseFloat(b);
     jackpots = parseInt(localStorage.getItem("stop1000_jackpots") || "0") || 0;
   } catch (e) {}
+  function saveCoins() { try { localStorage.setItem("stop1000_coins", String(coins)); } catch (e) {} }
+  function updateWallet() {
+    coinsStartEl.textContent  = coins;
+    coinsResultEl.textContent = coins;
+  }
 
   // three dolls (colors + faces)
   const DOLLS = [
@@ -241,10 +293,29 @@
   // ---- Input ----
   function armAudio() { try { getAC(); } catch (e) {} }
 
-  function startGame() {
+  function showModeSelect() {
+    state = STATE.IDLE;
+    startScreen.classList.remove("hidden");
+    overScreen.classList.add("hidden");
+    stopBtn.classList.remove("visible");
+    updateWallet();
+  }
+
+  function startGame(m) {
     armAudio();
+    if (m) mode = m;
+    const cost = COST[mode];
+    // Not enough coins → bounce back to mode select with a message
+    if (coins < cost) {
+      showModeSelect();
+      coinMsgEl.textContent = "코인이 부족해요 😢 (참가비 " + cost + "🪙)";
+      playSound("fail");
+      return;
+    }
     // warm up speech synthesis on the user gesture (some browsers need this)
     if (ttsOK) { try { window.speechSynthesis.resume(); } catch (e) {} }
+    coins -= cost; saveCoins(); updateWallet();
+    coinMsgEl.textContent = "";
     playSound("coin");
     state = STATE.COUNTDOWN;
     countIndex = 0;
@@ -278,6 +349,10 @@
       snd = "jackpot";
       jackpots++;
       try { localStorage.setItem("stop1000_jackpots", String(jackpots)); } catch (e) {}
+      // reward coins by mode
+      const won = REWARD[mode];
+      coins += won; saveCoins();
+      rewardLineEl.textContent = "🪙 +" + won + " 코인 획득!";
     } else if (absDiff <= 0.03) {
       grade = "😖 아쉽다! 거의!"; gcolor = "#ffd24d";
       hint = dirHint(diff); snd = "near";
@@ -288,6 +363,8 @@
       grade = "❌ 실패"; gcolor = "#ff8080";
       hint = dirHint(diff); snd = "fail";
     }
+
+    if (!isJackpot) rewardLineEl.textContent = "";
 
     gradeEl.textContent = grade;
     gradeEl.style.color = gcolor;
@@ -301,6 +378,7 @@
     }
     bestErrEl.textContent = (bestErr === null) ? "—" : "±" + bestErr.toFixed(2) + "s";
     jackpotCntEl.textContent = jackpots;
+    updateWallet();
 
     playSound(snd);
     if (isJackpot) burst();
@@ -327,8 +405,10 @@
   }
 
   // buttons / taps
-  startBtn.addEventListener("click", startGame);
-  retryBtn.addEventListener("click", startGame);
+  easyBtn.addEventListener("click", () => startGame("easy"));
+  hardBtn.addEventListener("click", () => startGame("hard"));
+  retryBtn.addEventListener("click", () => startGame(mode));
+  modeBtn.addEventListener("click", () => { playSound("stop"); showModeSelect(); });
   stopBtn.addEventListener("touchstart", e => { e.preventDefault(); e.stopPropagation(); doStop(); }, { passive: false });
   stopBtn.addEventListener("click", e => { e.stopPropagation(); doStop(); });
 
@@ -342,9 +422,9 @@
   window.addEventListener("keydown", e => {
     if (e.code === "Space" || e.code === "Enter") {
       e.preventDefault();
-      if (state === STATE.IDLE) startGame();
+      if (state === STATE.IDLE) startGame("easy");
       else if (state === STATE.RUNNING) doStop();
-      else if (state === STATE.RESULT) startGame();
+      else if (state === STATE.RESULT) startGame(mode);
     }
   });
 
@@ -549,8 +629,12 @@
 
     let text, color;
     if (state === STATE.RUNNING) {
-      const t = (performance.now() - runStart) / 1000; // live elapsed time
-      text = t.toFixed(2).padStart(5, "0"); color = "#57c7ff";
+      if (mode === "hard") {                            // HARD: hide the number
+        text = "??.??"; color = "#ff5c5c";
+      } else {                                          // EASY: live elapsed time
+        const t = (performance.now() - runStart) / 1000;
+        text = t.toFixed(2).padStart(5, "0"); color = "#57c7ff";
+      }
     } else if (state === STATE.COUNTDOWN) {
       text = "00.00"; color = "#3d7d5a";
     } else if (state === STATE.RESULT) {
@@ -613,7 +697,8 @@
     ctx.fillText("정확히 10.00초에 STOP!", W / 2, booth.y + booth.h + 44);
     ctx.font = "700 15px -apple-system, sans-serif";
     ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.fillText("숫자를 보고 딱 맞춰요", W / 2, booth.y + booth.h + 70);
+    ctx.fillText(mode === "hard" ? "감으로 딱 맞춰요 · 숫자 숨김 🙈" : "숫자를 보고 딱 맞춰요",
+                 W / 2, booth.y + booth.h + 70);
   }
 
   function drawParticles() {
@@ -657,14 +742,17 @@
 
   // expose a tiny test hook (used by automated verification only)
   window.__stopGame = {
-    start: startGame,
+    start: startGame,                  // start(mode)
     stopAt: function (sec) {           // force a precise result for testing
       if (state === STATE.COUNTDOWN || state === STATE.RUNNING) {
         state = STATE.RUNNING;
         elapsed = sec; finishRun();
       }
     },
-    getState: () => state
+    getState: () => state,
+    getMode:  () => mode,
+    getCoins: () => coins,
+    setCoins: (n) => { coins = n; saveCoins(); updateWallet(); }
   };
 
   // Service worker (PWA) — only over http(s), harmless to skip on file://
@@ -674,6 +762,7 @@
     });
   }
 
+  updateWallet();          // show starting wallet
   requestAnimationFrame(loop);
 })();
 </script>

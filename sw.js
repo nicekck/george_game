@@ -1,4 +1,4 @@
-const CACHE = "stop1000-v1";
+const CACHE = "stop1000-v2";
 const ASSETS = [
   "./",
   "./index.html",

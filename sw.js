@@ -1,7 +1,8 @@
-const CACHE = "george-jump-v1";
+const CACHE = "stop1000-v1";
 const ASSETS = [
   "./",
   "./index.html",
+  "./jump.html",
   "./assets/george.png",
   "./assets/icon-192.png",
   "./assets/icon-512.png",

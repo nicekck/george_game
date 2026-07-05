@@ -5,85 +5,107 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="George Jump">
+<meta name="apple-mobile-web-app-title" content="Stop 10.00">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1b2838">
+<meta name="theme-color" content="#151a2e">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
-<title>George Jump</title>
+<title>Stop 10.00 — 10초 가챠</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
-    background: #0e1622;
+    background: #0b0e1c;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     user-select: none; -webkit-user-select: none;
     touch-action: none;
   }
   #game-wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   canvas { display: block; touch-action: none; }
+
   .overlay {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     color: #fff; text-align: center; padding: 24px;
-    background: rgba(10, 18, 30, 0.72);
+    background: rgba(9, 12, 26, 0.74);
     backdrop-filter: blur(2px);
+    z-index: 5;
   }
   .overlay.hidden { display: none; }
   .title {
-    font-size: clamp(36px, 12vw, 72px); font-weight: 800;
-    letter-spacing: 1px; line-height: 1.05;
-    background: linear-gradient(180deg, #ffe48a, #f6a821);
+    font-size: clamp(38px, 13vw, 78px); font-weight: 900;
+    letter-spacing: 1px; line-height: 1.0;
+    background: linear-gradient(180deg, #a7f3ff, #4d7dff);
     -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 26px rgba(93,140,255,0.35);
   }
-  .subtitle { margin-top: 10px; font-size: clamp(14px, 4.5vw, 20px); opacity: 0.85; }
+  .title .big { font-size: 1.28em; }
+  .subtitle { margin-top: 12px; font-size: clamp(14px, 4.4vw, 20px); opacity: 0.82; line-height: 1.45; }
+  .subtitle b { color: #ffe27a; }
   .btn {
-    margin-top: 28px; padding: 16px 40px; font-size: clamp(18px, 5vw, 24px);
-    font-weight: 700; color: #1b2838; border: none; border-radius: 999px;
-    background: linear-gradient(180deg, #ffe48a, #f6a821);
-    box-shadow: 0 8px 0 #b9791a, 0 12px 24px rgba(0,0,0,0.4);
+    margin-top: 30px; padding: 17px 46px; font-size: clamp(19px, 5.4vw, 26px);
+    font-weight: 800; color: #0b1020; border: none; border-radius: 999px;
+    background: linear-gradient(180deg, #ffe27a, #ffb020);
+    box-shadow: 0 8px 0 #b97d14, 0 14px 26px rgba(0,0,0,0.45);
     cursor: pointer; transition: transform .05s ease; touch-action: manipulation;
   }
-  .btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #b9791a; }
-  .score-line { margin-top: 18px; font-size: clamp(16px, 5vw, 22px); }
-  .score-line b { color: #ffe48a; }
-  .best-line { margin-top: 6px; font-size: clamp(13px, 4vw, 16px); opacity: 0.7; }
-  .hint { margin-top: 22px; font-size: clamp(12px, 3.6vw, 15px); opacity: 0.55; }
-  #pause-btn {
-    position: absolute;
-    top: max(16px, env(safe-area-inset-top, 16px));
-    right: max(16px, env(safe-area-inset-right, 16px));
-    width: 48px; height: 48px; border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.35);
-    background: rgba(0,0,0,0.32);
-    backdrop-filter: blur(6px);
-    color: #fff; font-size: 18px;
-    cursor: pointer; display: none;
-    z-index: 10; touch-action: manipulation;
-    align-items: center; justify-content: center;
+  .btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #b97d14; }
+  .btn.green { background: linear-gradient(180deg, #b6ff9c, #33cc55); box-shadow: 0 8px 0 #1d8a37, 0 14px 26px rgba(0,0,0,0.45); }
+  .btn.green:active { box-shadow: 0 4px 0 #1d8a37; }
+
+  .result-time {
+    margin-top: 6px; font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: clamp(48px, 17vw, 104px); font-weight: 800; letter-spacing: 2px;
   }
-  #pause-btn.visible { display: flex; }
+  .result-grade { margin-top: 4px; font-size: clamp(24px, 8vw, 40px); font-weight: 900; }
+  .result-hint { margin-top: 12px; font-size: clamp(14px, 4.4vw, 19px); opacity: 0.8; }
+  .best-line { margin-top: 18px; font-size: clamp(13px, 4vw, 16px); opacity: 0.68; }
+  .best-line b { color: #ffe27a; }
+  .hint { margin-top: 24px; font-size: clamp(12px, 3.6vw, 15px); opacity: 0.5; line-height: 1.5; }
+
+  /* Big STOP button shown during RUNNING */
+  #stop-btn {
+    position: absolute;
+    left: 50%; transform: translateX(-50%);
+    bottom: max(40px, env(safe-area-inset-bottom, 40px));
+    width: min(230px, 62vw); height: min(230px, 62vw);
+    border-radius: 50%;
+    border: none;
+    background: radial-gradient(circle at 50% 38%, #ff6b6b, #d61e2e 70%);
+    box-shadow: 0 12px 0 #8f1420, 0 20px 40px rgba(0,0,0,0.5), inset 0 6px 18px rgba(255,255,255,0.28);
+    color: #fff; font-size: clamp(34px, 11vw, 52px); font-weight: 900; letter-spacing: 3px;
+    cursor: pointer; display: none; z-index: 6; touch-action: manipulation;
+  }
+  #stop-btn.visible { display: block; }
+  #stop-btn:active { transform: translateX(-50%) translateY(6px); box-shadow: 0 6px 0 #8f1420, 0 12px 24px rgba(0,0,0,0.5), inset 0 6px 18px rgba(255,255,255,0.28); }
+
+  .jump-link {
+    position: absolute; bottom: 14px; right: 16px; z-index: 5;
+    font-size: 12px; color: rgba(255,255,255,0.4); text-decoration: none;
+  }
 </style>
 </head>
 <body>
 <div id="game-wrap">
   <canvas id="game"></canvas>
 
-  <button id="pause-btn" aria-label="일시정지">⏸</button>
+  <button id="stop-btn" aria-label="멈춤">STOP</button>
 
   <div id="start-screen" class="overlay">
-    <div class="title">GEORGE<br>JUMP</div>
-    <div class="subtitle">탭해서 점프! 동전을 모으고 장애물을 피하세요</div>
-    <button class="btn" id="start-btn">시작하기</button>
-    <div class="hint">더블 점프 가능 · Esc / ⏸ 로 일시정지</div>
+    <div class="title">STOP<br><span class="big">10.00</span></div>
+    <div class="subtitle">가챠 부스의 <b>10초 맞추기</b>!<br>스톱워치를 정확히 <b>10.00초</b>에 멈추면<br>문이 열리고 인형을 획득합니다.</div>
+    <button class="btn" id="start-btn">🪙 동전 넣고 START</button>
+    <div class="hint">START 후 "삼·이·일" 카운트 → 타이머 작동(숨김)<br>화면 아무 곳이나 탭해도 STOP 됩니다</div>
+    <a class="jump-link" href="jump.html">🏃 George Jump →</a>
   </div>
 
   <div id="over-screen" class="overlay hidden">
-    <div class="title" style="font-size: clamp(30px, 10vw, 56px)">게임 오버</div>
-    <div class="score-line">점수 <b id="final-score">0</b></div>
-    <div class="best-line">최고 점수 <span id="best-score">0</span></div>
+    <div class="result-grade" id="grade">—</div>
+    <div class="result-time" id="final-time">0.00</div>
+    <div class="result-hint" id="result-hint"></div>
+    <div class="best-line">최고 기록(오차) <b id="best-err">—</b> · 잭팟 <b id="jackpot-count">0</b>회</div>
     <button class="btn" id="retry-btn">다시 하기</button>
-    <div class="hint">탭하여 다시 시작</div>
+    <div class="hint">Space / 탭으로 다시 시작</div>
   </div>
 </div>
 
@@ -97,17 +119,20 @@
   const overScreen  = document.getElementById("over-screen");
   const startBtn    = document.getElementById("start-btn");
   const retryBtn    = document.getElementById("retry-btn");
-  const pauseBtn    = document.getElementById("pause-btn");
-  const finalScoreEl = document.getElementById("final-score");
-  const bestScoreEl  = document.getElementById("best-score");
+  const stopBtn     = document.getElementById("stop-btn");
+  const gradeEl     = document.getElementById("grade");
+  const finalTimeEl = document.getElementById("final-time");
+  const resultHintEl= document.getElementById("result-hint");
+  const bestErrEl   = document.getElementById("best-err");
+  const jackpotCntEl= document.getElementById("jackpot-count");
 
-  // ---- Canvas resize ----
+  // ---- Canvas resize (reused pattern) ----
   const W = 480;
   let H = 800, scale = 1, offsetX = 0, offsetY = 0, dpr = 1;
   function resize() {
     const vw = window.innerWidth, vh = window.innerHeight;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    H = Math.max(640, Math.min(Math.round(W * vh / vw), 1100));
+    H = Math.max(680, Math.min(Math.round(W * vh / vw), 1100));
     scale = Math.min(vw / W, vh / H);
     canvas.width  = Math.round(vw * dpr);
     canvas.height = Math.round(vh * dpr);
@@ -120,392 +145,246 @@
   window.addEventListener("orientationchange", resize);
   resize();
 
-  // ---- Web Audio sounds ----
+  // ---- Web Audio sounds (reused synth skeleton) ----
   let audioCtx = null;
   function getAC() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === "suspended") audioCtx.resume();
     return audioCtx;
   }
+  function tone(freq, t0, dur, type, vol) {
+    const ac = getAC(), osc = ac.createOscillator(), g = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(vol || 0.15, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.start(t0); osc.stop(t0 + dur);
+    return osc;
+  }
   function playSound(type) {
     try {
-      const ac = getAC(), osc = ac.createOscillator(), g = ac.createGain();
-      osc.connect(g); g.connect(ac.destination);
-      const t = ac.currentTime;
+      const ac = getAC(), t = ac.currentTime;
       switch (type) {
-        case "jump":   // 1st jump – rising chip
-          osc.type = "square";
-          osc.frequency.setValueAtTime(260, t);
-          osc.frequency.exponentialRampToValueAtTime(520, t + 0.12);
-          g.gain.setValueAtTime(0.12, t);
-          g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-          osc.start(t); osc.stop(t + 0.16); break;
-        case "jump2":  // double jump – higher pitch
-          osc.type = "square";
-          osc.frequency.setValueAtTime(420, t);
-          osc.frequency.exponentialRampToValueAtTime(780, t + 0.1);
-          g.gain.setValueAtTime(0.1, t);
-          g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-          osc.start(t); osc.stop(t + 0.14); break;
-        case "coin":   // bright ding
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(900, t);
-          osc.frequency.setValueAtTime(1320, t + 0.05);
-          g.gain.setValueAtTime(0.18, t);
-          g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-          osc.start(t); osc.stop(t + 0.22); break;
-        case "land":   // soft thud
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(180, t);
-          osc.frequency.exponentialRampToValueAtTime(70, t + 0.07);
-          g.gain.setValueAtTime(0.08, t);
-          g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-          osc.start(t); osc.stop(t + 0.1); break;
-        case "over":   // descending womp
-          osc.type = "sawtooth";
-          osc.frequency.setValueAtTime(380, t);
-          osc.frequency.exponentialRampToValueAtTime(90, t + 0.5);
-          g.gain.setValueAtTime(0.2, t);
-          g.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-          osc.start(t); osc.stop(t + 0.55); break;
-        case "pause":  // soft click
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(660, t);
-          g.gain.setValueAtTime(0.08, t);
-          g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-          osc.start(t); osc.stop(t + 0.1); break;
+        case "beep":                       // countdown tick
+          tone(620, t, 0.16, "square", 0.14); break;
+        case "go":                         // start whistle
+          { const o = tone(700, t, 0.34, "square", 0.16);
+            o.frequency.exponentialRampToValueAtTime(1180, t + 0.3); } break;
+        case "stop":                       // stop click
+          tone(300, t, 0.09, "square", 0.16); break;
+        case "jackpot":                    // ascending arpeggio
+          [523, 659, 784, 1047, 1319].forEach((f, i) =>
+            tone(f, t + i * 0.11, 0.5, "triangle", 0.16)); break;
+        case "near":                       // close-but-no chime (two soft notes)
+          tone(660, t, 0.22, "sine", 0.14);
+          tone(560, t + 0.12, 0.28, "sine", 0.12); break;
+        case "fail":                       // descending womp
+          { const o = tone(360, t, 0.55, "sawtooth", 0.18);
+            o.frequency.exponentialRampToValueAtTime(90, t + 0.5); } break;
+        case "coin":                       // insert-coin blip
+          tone(880, t, 0.06, "square", 0.14);
+          tone(1245, t + 0.06, 0.1, "square", 0.14); break;
       }
     } catch (e) {}
   }
 
-  // ---- State ----
-  const STATE = { START: 0, PLAY: 1, OVER: 2, PAUSE: 3 };
-  let state = STATE.START;
-  const GROUND_H = 96;
-  const groundY = () => H - GROUND_H;
-
-  const player = {
-    x: 96, y: 0, w: 28, h: 62,
-    vy: 0, onGround: true, jumps: 0, maxJumps: 2,
-    legPhase: 0, landSquash: 0
-  };
-
-  const georgeImg = new Image();
-  let georgeReady = false;
-  georgeImg.onload = () => {
-    georgeReady = true;
-    player.w = Math.round(player.h * georgeImg.width / georgeImg.height);
-  };
-  georgeImg.src = "data:image/png;base64,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";
-
-  const GRAVITY = 2400, JUMP_V = -880;
-  let obstacles = [], coins = [], particles = [], clouds = [];
-  let score = 0, coinCount = 0, best = 0;
-  let speed = 320, spawnTimer = 0, coinTimer = 0, scrollX = 0, shake = 0;
-
-  try { best = parseInt(localStorage.getItem("georgeJumpBest") || "0") || 0; } catch (e) {}
-
-  function resetGame() {
-    player.y = groundY() - player.h;
-    player.vy = 0; player.onGround = true; player.jumps = 0; player.landSquash = 0;
-    obstacles = []; coins = []; particles = [];
-    score = 0; coinCount = 0; speed = 320;
-    spawnTimer = 0.6; coinTimer = 1.2; scrollX = 0; shake = 0;
-    clouds = [];
-    for (let i = 0; i < 4; i++)
-      clouds.push({ x: Math.random() * W, y: 60 + Math.random() * 180,
-        s: 0.4 + Math.random() * 0.6, r: 26 + Math.random() * 22 });
+  // Speak Korean count "삼/이/일" with beep fallback
+  let ttsOK = ("speechSynthesis" in window);
+  function speakCount(word) {
+    let spoke = false;
+    if (ttsOK) {
+      try {
+        const u = new SpeechSynthesisUtterance(word);
+        u.lang = "ko-KR"; u.rate = 1.0; u.pitch = 1.1; u.volume = 1.0;
+        u.onerror = () => {};
+        window.speechSynthesis.speak(u);
+        spoke = true;
+      } catch (e) { spoke = false; }
+    }
+    // Always play a beep too (guarantees audible feedback even if TTS silent)
+    playSound("beep");
+    return spoke;
   }
+
+  // ---- State machine ----
+  const STATE = { IDLE: 0, COUNTDOWN: 1, RUNNING: 2, RESULT: 3 };
+  let state = STATE.IDLE;
+
+  const TARGET = 10.0;          // seconds
+  const TIMEOUT = 15.0;         // auto-fail if you never stop
+  let runStart = 0;             // performance.now() when timer started
+  let elapsed = 0;             // final measured elapsed (s)
+  let countIndex = 0;          // 3,2,1 index
+  let countTimer = 0;          // seconds until next count step
+  const COUNT_WORDS = ["삼", "이", "일"];
+  let doorOpen = 0;            // 0..1 door slide progress (RESULT jackpot)
+  let particles = [];
+  let anim = 0;                // global animation clock (s)
+  let flashGo = 0;             // "GO!" flash timer
+
+  // persistent stats
+  let bestErr = null, jackpots = 0;
+  try {
+    const b = localStorage.getItem("stop1000_bestErr");
+    if (b !== null) bestErr = parseFloat(b);
+    jackpots = parseInt(localStorage.getItem("stop1000_jackpots") || "0") || 0;
+  } catch (e) {}
+
+  // three dolls (colors + faces)
+  const DOLLS = [
+    { c1: "#ff8fb3", c2: "#ff5c8a", ear: "bunny",  eye: "#3a2030" },
+    { c1: "#9fe0ff", c2: "#4db6ff", ear: "round",  eye: "#20303a" },
+    { c1: "#ffe08a", c2: "#ffc23d", ear: "cat",    eye: "#4a3410" },
+  ];
 
   // ---- Input ----
-  function doJump() {
-    if (state !== STATE.PLAY) return;
-    if (player.jumps < player.maxJumps) {
-      player.vy = JUMP_V; player.onGround = false;
-      playSound(player.jumps === 0 ? "jump" : "jump2");
-      player.jumps++;
-      for (let i = 0; i < 6; i++)
-        particles.push({
-          x: player.x + player.w / 2, y: player.y + player.h,
-          vx: (Math.random() - 0.5) * 120, vy: Math.random() * 120 + 40,
-          life: 0.4, max: 0.4, r: 4 + Math.random() * 3, c: "#cfd8e3"
-        });
+  function armAudio() { try { getAC(); } catch (e) {} }
+
+  function startGame() {
+    armAudio();
+    // warm up speech synthesis on the user gesture (some browsers need this)
+    if (ttsOK) { try { window.speechSynthesis.resume(); } catch (e) {} }
+    playSound("coin");
+    state = STATE.COUNTDOWN;
+    countIndex = 0;
+    countTimer = 0.35;          // small delay before "삼"
+    doorOpen = 0; particles = []; flashGo = 0;
+    startScreen.classList.add("hidden");
+    overScreen.classList.add("hidden");
+    stopBtn.classList.remove("visible");
+  }
+
+  function doStop() {
+    if (state !== STATE.RUNNING) return;
+    elapsed = (performance.now() - runStart) / 1000;
+    finishRun();
+  }
+
+  function finishRun() {
+    state = STATE.RESULT;
+    stopBtn.classList.remove("visible");
+    const diff = elapsed - TARGET;         // + = 늦게, - = 빠르게
+    const absDiff = Math.abs(diff);
+    const centi = Math.round(elapsed * 100) / 100;
+    const isJackpot = Math.abs(centi - TARGET) < 0.005; // shows 10.00
+
+    finalTimeEl.textContent = centi.toFixed(2);
+
+    let grade, gcolor, hint, snd;
+    if (isJackpot) {
+      grade = "🎉 JACKPOT!"; gcolor = "#7dff9b";
+      hint = "정확히 10.00! 부스 문이 열립니다!";
+      snd = "jackpot";
+      jackpots++;
+      try { localStorage.setItem("stop1000_jackpots", String(jackpots)); } catch (e) {}
+    } else if (absDiff <= 0.03) {
+      grade = "😖 아쉽다! 거의!"; gcolor = "#ffd24d";
+      hint = dirHint(diff); snd = "near";
+    } else if (absDiff <= 0.10) {
+      grade = "🙂 가까워요"; gcolor = "#ffd24d";
+      hint = dirHint(diff); snd = "near";
+    } else {
+      grade = "❌ 실패"; gcolor = "#ff8080";
+      hint = dirHint(diff); snd = "fail";
+    }
+
+    gradeEl.textContent = grade;
+    gradeEl.style.color = gcolor;
+    finalTimeEl.style.color = isJackpot ? "#7dff9b" : "#fff";
+    resultHintEl.textContent = hint;
+
+    // best error (closest to 10.00)
+    if (bestErr === null || absDiff < bestErr) {
+      bestErr = absDiff;
+      try { localStorage.setItem("stop1000_bestErr", String(bestErr)); } catch (e) {}
+    }
+    bestErrEl.textContent = (bestErr === null) ? "—" : "±" + bestErr.toFixed(2) + "s";
+    jackpotCntEl.textContent = jackpots;
+
+    playSound(snd);
+    if (isJackpot) burst();
+
+    overScreen.classList.remove("hidden");
+  }
+
+  function dirHint(diff) {
+    if (diff < 0) return "▲ " + Math.abs(diff).toFixed(2) + "초 빨랐어요";
+    return "▼ " + diff.toFixed(2) + "초 늦었어요";
+  }
+
+  function burst() {
+    for (let i = 0; i < 60; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 260;
+      particles.push({
+        x: W / 2, y: H * 0.42,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 80,
+        life: 1.0 + Math.random() * 0.8, max: 1.8,
+        r: 3 + Math.random() * 4,
+        c: ["#ffe27a", "#7dff9b", "#a7f3ff", "#ff8fb3", "#fff"][i % 5]
+      });
     }
   }
 
-  let last = 0;
-  function togglePause() {
-    if (state === STATE.PLAY) {
-      state = STATE.PAUSE; playSound("pause");
-      pauseBtn.textContent = "▶";
-    } else if (state === STATE.PAUSE) {
-      state = STATE.PLAY; last = 0; playSound("pause");
-      pauseBtn.textContent = "⏸";
-    }
-  }
+  // buttons / taps
+  startBtn.addEventListener("click", startGame);
+  retryBtn.addEventListener("click", startGame);
+  stopBtn.addEventListener("touchstart", e => { e.preventDefault(); e.stopPropagation(); doStop(); }, { passive: false });
+  stopBtn.addEventListener("click", e => { e.stopPropagation(); doStop(); });
 
-  pauseBtn.addEventListener("touchstart", e => { e.stopPropagation(); e.preventDefault(); }, { passive: false });
-  pauseBtn.addEventListener("click", e => { e.stopPropagation(); togglePause(); });
-
-  function onTap(e) {
-    e.preventDefault();
-    if (state === STATE.PLAY) doJump();
-    else if (state === STATE.PAUSE) togglePause();
+  // tapping anywhere on the canvas during RUNNING also stops
+  function onCanvasTap(e) {
+    if (state === STATE.RUNNING) { e.preventDefault(); doStop(); }
   }
-  canvas.addEventListener("touchstart", onTap, { passive: false });
-  canvas.addEventListener("mousedown", onTap);
+  canvas.addEventListener("touchstart", onCanvasTap, { passive: false });
+  canvas.addEventListener("mousedown", onCanvasTap);
 
   window.addEventListener("keydown", e => {
-    if (e.code === "Escape" || e.code === "KeyP") {
+    if (e.code === "Space" || e.code === "Enter") {
       e.preventDefault();
-      if (state === STATE.PLAY || state === STATE.PAUSE) togglePause();
-    } else if (e.code === "Space" || e.code === "ArrowUp") {
-      e.preventDefault();
-      if (state === STATE.START) startGame();
-      else if (state === STATE.PLAY) doJump();
-      else if (state === STATE.OVER) startGame();
+      if (state === STATE.IDLE) startGame();
+      else if (state === STATE.RUNNING) doStop();
+      else if (state === STATE.RESULT) startGame();
     }
   });
 
-  function startGame() {
-    resetGame(); state = STATE.PLAY;
-    startScreen.classList.add("hidden");
-    overScreen.classList.add("hidden");
-    pauseBtn.classList.add("visible");
-    pauseBtn.textContent = "⏸";
-  }
-  function gameOver() {
-    state = STATE.OVER; playSound("over");
-    if (score > best) {
-      best = score;
-      try { localStorage.setItem("georgeJumpBest", String(best)); } catch (e) {}
-    }
-    finalScoreEl.textContent = score;
-    bestScoreEl.textContent = best;
-    overScreen.classList.remove("hidden");
-    pauseBtn.classList.remove("visible");
-    shake = 14;
-  }
-  startBtn.addEventListener("click", startGame);
-  retryBtn.addEventListener("click", startGame);
-
-  // ---- Spawn ----
-  function spawnObstacle() {
-    const tall = Math.random() < 0.35;
-    const w = 28 + Math.random() * 18;
-    const h = tall ? 56 + Math.random() * 30 : 30 + Math.random() * 18;
-    obstacles.push({ x: W + 40, y: groundY() - h, w, h, passed: false });
-  }
-  function spawnCoin() {
-    const baseY = Math.random() < 0.5 ? groundY() - 60 : groundY() - 160;
-    const n = 1 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < n; i++)
-      coins.push({ x: W + 40 + i * 42, y: baseY, r: 13, t: Math.random() * 6, got: false });
-  }
-  function hit(a, b) {
-    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-  }
-
   // ---- Update ----
   function update(dt) {
-    if (state !== STATE.PLAY) return;
-    speed += dt * 6;
-    score += Math.floor(speed * dt * 0.05);
-    scrollX = (scrollX + speed * dt) % 48;
+    anim += dt;
+    if (flashGo > 0) flashGo = Math.max(0, flashGo - dt);
 
-    player.vy += GRAVITY * dt;
-    player.y  += player.vy * dt;
-    const gy = groundY() - player.h;
-    if (player.y >= gy) {
-      const wasAir = !player.onGround;
-      player.y = gy; player.vy = 0;
-      if (!player.onGround) { player.onGround = true; player.jumps = 0; }
-      if (wasAir) { player.landSquash = 1; playSound("land"); }
-    }
-    if (player.landSquash > 0) player.landSquash = Math.max(0, player.landSquash - dt * 12);
-    player.legPhase += dt * (player.onGround ? speed * 0.04 : 0);
-
-    for (const c of clouds) {
-      c.x -= speed * 0.12 * c.s * dt;
-      if (c.x < -80) { c.x = W + 60; c.y = 50 + Math.random() * 200; }
-    }
-
-    spawnTimer -= dt;
-    if (spawnTimer <= 0) {
-      spawnObstacle();
-      spawnTimer = Math.max(0.7, 1.5 - speed / 900) + Math.random() * 0.6;
-    }
-    coinTimer -= dt;
-    if (coinTimer <= 0) { spawnCoin(); coinTimer = 1.0 + Math.random() * 1.6; }
-
-    for (const o of obstacles) {
-      o.x -= speed * dt;
-      if (!o.passed && o.x + o.w < player.x) { o.passed = true; score += 5; }
-      if (hit(player, o)) { gameOver(); return; }
-    }
-    obstacles = obstacles.filter(o => o.x + o.w > -10);
-
-    for (const c of coins) {
-      c.x -= speed * dt; c.t += dt * 6;
-      if (!c.got) {
-        const dx = player.x + player.w / 2 - c.x;
-        const dy = player.y + player.h / 2 - c.y;
-        if (dx * dx + dy * dy < (c.r + 24) ** 2) {
-          c.got = true; coinCount++; score += 10; playSound("coin");
-          for (let i = 0; i < 8; i++)
-            particles.push({
-              x: c.x, y: c.y,
-              vx: (Math.random() - 0.5) * 220, vy: (Math.random() - 0.5) * 220,
-              life: 0.5, max: 0.5, r: 3 + Math.random() * 3, c: "#ffe48a"
-            });
+    if (state === STATE.COUNTDOWN) {
+      countTimer -= dt;
+      if (countTimer <= 0) {
+        if (countIndex < COUNT_WORDS.length) {
+          speakCount(COUNT_WORDS[countIndex]);
+          countIndex++;
+          countTimer = 1.0;                 // 1s per count
+        } else {
+          // GO! start the hidden timer
+          playSound("go");
+          flashGo = 0.9;
+          state = STATE.RUNNING;
+          runStart = performance.now();
+          stopBtn.classList.add("visible");
         }
       }
+    } else if (state === STATE.RUNNING) {
+      const t = (performance.now() - runStart) / 1000;
+      if (t >= TIMEOUT) { elapsed = t; finishRun(); }   // auto fail
+    } else if (state === STATE.RESULT) {
+      // animate door opening on jackpot
+      const target = (gradeEl.textContent.indexOf("JACKPOT") >= 0) ? 1 : 0;
+      doorOpen += (target - doorOpen) * Math.min(1, dt * 3.2);
     }
-    coins = coins.filter(c => !c.got && c.x > -20);
 
     for (const p of particles) {
-      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 200 * dt; p.life -= dt;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 320 * dt; p.life -= dt;
     }
     particles = particles.filter(p => p.life > 0);
-    if (shake > 0) shake = Math.max(0, shake - dt * 40);
   }
 
-  // ---- Draw ----
-  function drawBackground() {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, "#2a4a6e"); g.addColorStop(0.55, "#3d6e9c"); g.addColorStop(1, "#7fb4d6");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "rgba(255,236,170,0.85)";
-    ctx.beginPath(); ctx.arc(W - 90, 110, 46, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(255,236,170,0.18)";
-    ctx.beginPath(); ctx.arc(W - 90, 110, 78, 0, Math.PI * 2); ctx.fill();
-    for (const c of clouds) { ctx.fillStyle = "rgba(255,255,255,0.78)"; cloudShape(c.x, c.y, c.r); }
-  }
-  function cloudShape(x, y, r) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.arc(x + r * 0.9, y + 6, r * 0.75, 0, Math.PI * 2);
-    ctx.arc(x - r * 0.9, y + 8, r * 0.7, 0, Math.PI * 2);
-    ctx.arc(x, y + 12, r * 0.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  function drawGround() {
-    const gy = groundY();
-    ctx.fillStyle = "#6b4a2f"; ctx.fillRect(0, gy, W, GROUND_H);
-    ctx.fillStyle = "#5aa64b"; ctx.fillRect(0, gy, W, 16);
-    ctx.fillStyle = "#4d8f40";
-    for (let x = -scrollX; x < W; x += 48) ctx.fillRect(x, gy + 14, 24, 6);
-    ctx.fillStyle = "rgba(0,0,0,0.12)";
-    for (let x = -scrollX; x < W; x += 48) {
-      ctx.fillRect(x + 10, gy + 40, 6, 6); ctx.fillRect(x + 30, gy + 64, 5, 5);
-    }
-  }
-
-  // George sprite — 4-frame running animation via canvas transforms
-  function drawPlayer() {
-    const { x: px, y: py, w: pw, h: ph } = player;
-    const cx = px + pw / 2;
-
-    // ground shadow (fades when airborne)
-    const sg = Math.max(0, 1 - (groundY() - (py + ph)) / 220);
-    ctx.fillStyle = `rgba(0,0,0,${0.28 * sg})`;
-    ctx.beginPath(); ctx.ellipse(cx, groundY() + 4, pw * 0.62, 8, 0, 0, Math.PI * 2); ctx.fill();
-
-    if (!georgeReady) {
-      // fallback shape
-      ctx.fillStyle = "#28508a"; roundRect(px, py + ph * 0.25, pw, ph * 0.75, 6); ctx.fill();
-      ctx.fillStyle = "#e8c9a0";
-      ctx.beginPath(); ctx.arc(cx, py + ph * 0.18, pw * 0.42, 0, Math.PI * 2); ctx.fill();
-      return;
-    }
-
-    // --- 4-frame-like running animation using transforms ---
-    // cycle: 0→2π per stride (driven by legPhase)
-    const sinC = Math.sin(player.legPhase);
-    const cosC = Math.cos(player.legPhase);
-
-    let tilt, bobY, scaleX = 1, scaleY = 1;
-    if (player.onGround) {
-      // lean left/right ±0.07 rad, bob ±4px, slight squash at foot-strike
-      tilt   = sinC * 0.07;
-      bobY   = Math.abs(sinC) * 4;
-      scaleX = 1 + Math.abs(cosC) * 0.035;
-      scaleY = 1 - Math.abs(cosC) * 0.035;
-    } else {
-      // in air: tilt forward on ascent, back on descent
-      tilt = Math.max(-0.2, Math.min(0.2, player.vy / 4500));
-      bobY = 0;
-    }
-
-    // landing squash impulse (peaks then decays via landSquash 1→0)
-    const ls = player.landSquash;
-    if (ls > 0) {
-      const pulse = Math.sin(ls * Math.PI); // 0→1→0 envelope
-      scaleX = 1 + pulse * 0.22;
-      scaleY = 1 - pulse * 0.16;
-      bobY   = pulse * 7;
-      tilt   = 0;
-    }
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = false;
-    ctx.translate(cx, py + ph + bobY); // pivot: feet
-    ctx.rotate(tilt);
-    ctx.scale(scaleX, scaleY);
-    ctx.drawImage(georgeImg, -pw / 2, -ph, pw, ph);
-    ctx.restore();
-  }
-
-  function drawObstacles() {
-    for (const o of obstacles) {
-      ctx.fillStyle = "#3f7d36"; roundRect(o.x, o.y, o.w, o.h, 8); ctx.fill();
-      ctx.fillStyle = "#357030"; roundRect(o.x + o.w * 0.18, o.y + 6, o.w * 0.22, o.h - 12, 6); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.18)"; roundRect(o.x + o.w - 8, o.y + 4, 4, o.h - 10, 3); ctx.fill();
-    }
-  }
-  function drawCoins() {
-    for (const c of coins) {
-      const sq = Math.abs(Math.cos(c.t));
-      ctx.save(); ctx.translate(c.x, c.y); ctx.scale(0.4 + sq * 0.6, 1);
-      ctx.fillStyle = "#f6c026"; ctx.beginPath(); ctx.arc(0, 0, c.r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#ffe48a"; ctx.beginPath(); ctx.arc(0, 0, c.r * 0.6, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-      if (sq > 0.5) {
-        ctx.fillStyle = "#c8961a"; ctx.font = "bold 13px sans-serif";
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText("G", c.x, c.y + 1);
-      }
-    }
-  }
-  function drawParticles() {
-    for (const p of particles) {
-      ctx.globalAlpha = Math.max(0, p.life / p.max);
-      ctx.fillStyle = p.c;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-  function drawHUD() {
-    ctx.fillStyle = "#fff"; ctx.font = "bold 30px sans-serif";
-    ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 6;
-    ctx.fillText(String(score), 20, 22);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#f6c026"; ctx.beginPath(); ctx.arc(W - 78, 36, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.font = "bold 24px sans-serif"; ctx.textAlign = "left";
-    ctx.fillText("x " + coinCount, W - 60, 24);
-  }
-  function drawPauseOverlay() {
-    ctx.fillStyle = "rgba(10,18,30,0.62)"; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#fff"; ctx.font = "bold 52px sans-serif";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 12;
-    ctx.fillText("일시정지", W / 2, H / 2 - 20);
-    ctx.shadowBlur = 0; ctx.font = "22px sans-serif"; ctx.globalAlpha = 0.6;
-    ctx.fillText("탭하거나 Esc로 계속", W / 2, H / 2 + 36);
-    ctx.globalAlpha = 1;
-  }
-
+  // ---- Draw helpers ----
   function roundRect(x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -514,20 +393,258 @@
     ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#1b2145"); g.addColorStop(0.5, "#141a33"); g.addColorStop(1, "#0b0e1c");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // arcade floor
+    ctx.fillStyle = "#0e1120";
+    ctx.fillRect(0, H - 120, W, 120);
+    ctx.strokeStyle = "rgba(120,150,255,0.10)"; ctx.lineWidth = 2;
+    for (let i = -6; i <= 6; i++) {
+      ctx.beginPath();
+      ctx.moveTo(W / 2 + i * 30, H - 120);
+      ctx.lineTo(W / 2 + i * 120, H);
+      ctx.stroke();
+    }
+    // ambient glow dots
+    for (let i = 0; i < 5; i++) {
+      const gx = 60 + i * 92, gy = 70 + (i % 2) * 26;
+      ctx.fillStyle = ["#ff6b9d33","#4db6ff33","#ffe27a33"][i % 3];
+      ctx.beginPath(); ctx.arc(gx, gy, 30, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Booth geometry
+  const booth = { x: 70, y: 150, w: 340, h: 440 };
+
+  function drawBoothBack() {
+    const b = booth;
+    // cabinet body
+    ctx.fillStyle = "#2a3566";
+    roundRect(b.x - 16, b.y - 70, b.w + 32, b.h + 150, 22); ctx.fill();
+    // sign header
+    ctx.fillStyle = "#101634";
+    roundRect(b.x - 16, b.y - 70, b.w + 32, 56, 16); ctx.fill();
+    ctx.fillStyle = "#ffe27a";
+    ctx.font = "900 30px -apple-system, sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(255,180,60,0.6)"; ctx.shadowBlur = 16;
+    ctx.fillText("GACHA · 10.00", W / 2, b.y - 42);
+    ctx.shadowBlur = 0;
+
+    // inner lit wall
+    const g = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
+    g.addColorStop(0, "#3a4a86"); g.addColorStop(1, "#232c55");
+    ctx.fillStyle = g;
+    roundRect(b.x, b.y, b.w, b.h, 12); ctx.fill();
+
+    // stage floor inside booth
+    ctx.fillStyle = "#1a2145";
+    ctx.fillRect(b.x, b.y + b.h - 80, b.w, 80);
+  }
+
+  function drawChair(cx, baseY, w) {
+    // simple stool/chair
+    ctx.fillStyle = "#7a4a2e";
+    roundRect(cx - w / 2, baseY - 14, w, 14, 4); ctx.fill();        // seat
+    ctx.fillStyle = "#5e3822";
+    ctx.fillRect(cx - w / 2 + 4, baseY, 6, 22);                      // legs
+    ctx.fillRect(cx + w / 2 - 10, baseY, 6, 22);
+  }
+
+  function drawDoll(cx, baseY, s, d, bob) {
+    const by = baseY + bob;
+    // body
+    ctx.fillStyle = d.c2;
+    roundRect(cx - 26 * s, by - 52 * s, 52 * s, 52 * s, 20 * s); ctx.fill();
+    ctx.fillStyle = d.c1;
+    roundRect(cx - 20 * s, by - 46 * s, 40 * s, 30 * s, 16 * s); ctx.fill(); // belly
+    // head
+    ctx.fillStyle = d.c1;
+    ctx.beginPath(); ctx.arc(cx, by - 66 * s, 24 * s, 0, Math.PI * 2); ctx.fill();
+    // ears
+    ctx.fillStyle = d.c1;
+    if (d.ear === "bunny") {
+      roundRect(cx - 16 * s, by - 108 * s, 9 * s, 34 * s, 5 * s); ctx.fill();
+      roundRect(cx + 7 * s,  by - 108 * s, 9 * s, 34 * s, 5 * s); ctx.fill();
+    } else if (d.ear === "cat") {
+      ctx.beginPath();
+      ctx.moveTo(cx - 22 * s, by - 84 * s); ctx.lineTo(cx - 8 * s, by - 84 * s); ctx.lineTo(cx - 15 * s, by - 104 * s); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx + 22 * s, by - 84 * s); ctx.lineTo(cx + 8 * s, by - 84 * s); ctx.lineTo(cx + 15 * s, by - 104 * s); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(cx - 18 * s, by - 84 * s, 9 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 18 * s, by - 84 * s, 9 * s, 0, Math.PI * 2); ctx.fill();
+    }
+    // face
+    ctx.fillStyle = d.eye;
+    ctx.beginPath(); ctx.arc(cx - 8 * s, by - 68 * s, 3.2 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 8 * s, by - 68 * s, 3.2 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = d.eye; ctx.lineWidth = 2 * s;
+    ctx.beginPath(); ctx.arc(cx, by - 60 * s, 4 * s, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    // cheeks
+    ctx.fillStyle = "rgba(255,120,150,0.5)";
+    ctx.beginPath(); ctx.arc(cx - 15 * s, by - 62 * s, 3.5 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 15 * s, by - 62 * s, 3.5 * s, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawDolls() {
+    const b = booth;
+    const baseY = b.y + b.h - 80;
+    const positions = [b.x + b.w * 0.24, b.x + b.w * 0.5, b.x + b.w * 0.76];
+    const sizes = [0.92, 1.06, 0.92];
+    for (let i = 0; i < 3; i++) {
+      const cx = positions[i];
+      drawChair(cx, baseY, 56 * sizes[i]);
+      const bob = (state === STATE.IDLE || state === STATE.RESULT)
+        ? Math.sin(anim * 1.6 + i * 1.3) * 3 : 0;
+      drawDoll(cx, baseY - 18, sizes[i], DOLLS[i], bob);
+    }
+  }
+
+  function drawGlassDoors() {
+    const b = booth;
+    // door slide amount (0 closed .. 1 open)
+    const slide = doorOpen * (b.w / 2 + 10);
+    drawGlassPane(b.x, b.y, b.w / 2 - slide, b.h, -1);                       // left
+    drawGlassPane(b.x + b.w / 2 + slide, b.y, b.w / 2 - slide, b.h, 1);      // right
+  }
+  function drawGlassPane(x, y, w, h, side) {
+    if (w <= 1) return;
+    ctx.save();
+    ctx.beginPath(); roundRect(x, y, w, h, 8); ctx.clip();
+    // glass tint
+    ctx.fillStyle = "rgba(180,220,255,0.10)";
+    ctx.fillRect(x, y, w, h);
+    // diagonal highlights
+    ctx.strokeStyle = "rgba(255,255,255,0.16)"; ctx.lineWidth = 18;
+    ctx.beginPath();
+    ctx.moveTo(x + (side < 0 ? w * 0.2 : w * 0.1), y);
+    ctx.lineTo(x + (side < 0 ? w * 0.55 : w * 0.45), y + h);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(x + (side < 0 ? w * 0.55 : w * 0.45), y);
+    ctx.lineTo(x + (side < 0 ? w * 0.85 : w * 0.75), y + h);
+    ctx.stroke();
+    ctx.restore();
+    // frame
+    ctx.strokeStyle = "rgba(200,220,255,0.35)"; ctx.lineWidth = 3;
+    roundRect(x, y, w, h, 8); ctx.stroke();
+    // handle on inner edge
+    ctx.fillStyle = "#cfd8ff";
+    const hx = side < 0 ? x + w - 8 : x + 2;
+    roundRect(hx, y + h / 2 - 22, 6, 44, 3); ctx.fill();
+  }
+
+  // Stopwatch display panel (top of booth)
+  function drawStopwatch() {
+    const b = booth;
+    const px = W / 2, py = b.y + 6, pw = 150, ph = 52;
+    ctx.fillStyle = "#05060d";
+    roundRect(px - pw / 2, py, pw, ph, 10); ctx.fill();
+    ctx.strokeStyle = "rgba(120,200,255,0.4)"; ctx.lineWidth = 2;
+    roundRect(px - pw / 2, py, pw, ph, 10); ctx.stroke();
+
+    let text, color;
+    if (state === STATE.RUNNING) {
+      text = "??.??"; color = "#ff5c5c";           // hidden while running!
+    } else if (state === STATE.COUNTDOWN) {
+      text = "00.00"; color = "#3d7d5a";
+    } else if (state === STATE.RESULT) {
+      text = elapsed.toFixed(2).padStart(5, "0"); color = "#57ff8a";
+    } else {
+      text = "10.00"; color = "#57c7ff";           // idle: shows the goal
+    }
+    ctx.fillStyle = color;
+    ctx.font = "700 34px 'SF Mono', ui-monospace, Menlo, monospace";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.shadowColor = color; ctx.shadowBlur = state === STATE.RUNNING ? 8 : 12;
+    ctx.fillText(text, px, py + ph / 2 + 1);
+    ctx.shadowBlur = 0;
+
+    // "sec" label
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.font = "700 11px sans-serif";
+    ctx.fillText("SEC", px, py + ph - 6);
+  }
+
+  function drawCountdownOverlay() {
+    if (state !== STATE.COUNTDOWN) return;
+    // show big number for current count
+    const shown = 3 - countIndex; // countIndex increments after speaking
+    if (countIndex >= 1 && countIndex <= 3 && shown >= 1) {
+      const prog = 1 - Math.max(0, countTimer) / 1.0; // 0..1 within the second
+      const scaleN = 1.4 - prog * 0.5;
+      const alpha = Math.max(0, 1 - prog * 0.9);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#fff";
+      ctx.font = "900 " + Math.round(150 * scaleN) + "px -apple-system, sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(93,140,255,0.8)"; ctx.shadowBlur = 30;
+      ctx.fillText(String(shown), W / 2, H * 0.42);
+      ctx.restore();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  function drawGoFlash() {
+    if (flashGo <= 0) return;
+    const a = flashGo / 0.9;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = "#7dff9b";
+    ctx.font = "900 96px -apple-system, sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(60,255,120,0.9)"; ctx.shadowBlur = 30;
+    ctx.fillText("GO!", W / 2, H * 0.42);
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  }
+
+  function drawRunningHint() {
+    if (state !== STATE.RUNNING) return;
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.font = "800 22px -apple-system, sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("감으로 10.00초에 STOP!", W / 2, booth.y + booth.h + 44);
+    ctx.font = "700 15px -apple-system, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fillText("(타이머는 숨겨져 있어요)", W / 2, booth.y + booth.h + 70);
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   function render() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#0e1622"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const sx = shake > 0 ? (Math.random() - 0.5) * shake : 0;
-    const sy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (offsetX + sx) * dpr, (offsetY + sy) * dpr);
+    ctx.fillStyle = "#0b0e1c"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, offsetX * dpr, offsetY * dpr);
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
-    drawBackground(); drawGround(); drawCoins(); drawObstacles(); drawParticles(); drawPlayer();
-    if (state === STATE.PLAY || state === STATE.PAUSE) drawHUD();
-    if (state === STATE.PAUSE) drawPauseOverlay();
+
+    drawBackground();
+    drawBoothBack();
+    drawDolls();
+    drawGlassDoors();
+    drawStopwatch();
+    drawCountdownOverlay();
+    drawGoFlash();
+    drawRunningHint();
+    drawParticles();
+
     ctx.restore();
   }
 
+  let last = 0;
   function loop(t) {
     if (!last) last = t;
     const dt = Math.min((t - last) / 1000, 0.05);
@@ -537,10 +654,25 @@
     requestAnimationFrame(loop);
   }
 
-  // Service Worker (PWA)
-  // PWA service worker: works when served over HTTP, not needed for file:// play
+  // expose a tiny test hook (used by automated verification only)
+  window.__stopGame = {
+    start: startGame,
+    stopAt: function (sec) {           // force a precise result for testing
+      if (state === STATE.COUNTDOWN || state === STATE.RUNNING) {
+        state = STATE.RUNNING;
+        elapsed = sec; finishRun();
+      }
+    },
+    getState: () => state
+  };
 
-  resetGame();
+  // Service worker (PWA) — only over http(s), harmless to skip on file://
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+
   requestAnimationFrame(loop);
 })();
 </script>

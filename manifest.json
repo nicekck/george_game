@@ -1,12 +1,12 @@
 {
-  "name": "George Jump",
-  "short_name": "George Jump",
-  "description": "원탭 무한 점프 게임 — 장애물을 피하고 동전을 모으세요!",
+  "name": "Stop 10.00 — 10초 가챠",
+  "short_name": "Stop 10.00",
+  "description": "가챠 부스의 10초 맞추기! 스톱워치를 정확히 10.00초에 멈춰 문을 열고 인형을 획득하세요.",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0e1622",
-  "theme_color": "#1b2838",
+  "background_color": "#0b0e1c",
+  "theme_color": "#151a2e",
   "icons": [
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

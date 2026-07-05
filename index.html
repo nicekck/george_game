@@ -549,7 +549,8 @@
 
     let text, color;
     if (state === STATE.RUNNING) {
-      text = "??.??"; color = "#ff5c5c";           // hidden while running!
+      const t = (performance.now() - runStart) / 1000; // live elapsed time
+      text = t.toFixed(2).padStart(5, "0"); color = "#57c7ff";
     } else if (state === STATE.COUNTDOWN) {
       text = "00.00"; color = "#3d7d5a";
     } else if (state === STATE.RESULT) {
@@ -560,7 +561,7 @@
     ctx.fillStyle = color;
     ctx.font = "700 34px 'SF Mono', ui-monospace, Menlo, monospace";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.shadowColor = color; ctx.shadowBlur = state === STATE.RUNNING ? 8 : 12;
+    ctx.shadowColor = color; ctx.shadowBlur = 12;
     ctx.fillText(text, px, py + ph / 2 + 1);
     ctx.shadowBlur = 0;
 
@@ -609,10 +610,10 @@
     ctx.fillStyle = "rgba(255,255,255,0.8)";
     ctx.font = "800 22px -apple-system, sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("감으로 10.00초에 STOP!", W / 2, booth.y + booth.h + 44);
+    ctx.fillText("정확히 10.00초에 STOP!", W / 2, booth.y + booth.h + 44);
     ctx.font = "700 15px -apple-system, sans-serif";
     ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.fillText("(타이머는 숨겨져 있어요)", W / 2, booth.y + booth.h + 70);
+    ctx.fillText("숫자를 보고 딱 맞춰요", W / 2, booth.y + booth.h + 70);
   }
 
   function drawParticles() {
